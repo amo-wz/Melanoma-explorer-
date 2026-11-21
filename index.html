@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Occult Melanoma Cohort Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Plan: green-and-purple research explorer. Deep aubergine sidebar holds the title and index case; light lavender-grey workspace on the right.
+   Purple = accent and the hypothetical patient marker; green = the selected cohort; neutral grey = reference groups. */
+:root {
+  --paper: #f5f3f8;
+  --card: #ffffff;
+  --ink: #221a33;
+  --ink-2: #514862;
+  --ink-3: #82798f;
+  --rule: #e4dfeb;
+  --accent: #7240a8;
+  --accent-soft: #efe7f7;
+  --sel: #1f8a5b;
+  --sel-soft: rgba(31,138,91,0.15);
+  --ref: #8f899a;
+  --warn: #9a6410;
+  --warn-soft: #fbf1dc;
+  --side: #2b1b45;
+  --side-2: #3a2759;
+  --side-ink: #f4effa;
+  --side-ink-2: #c9bcdf;
+  --side-accent: #7fd6a8;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #15111c; --card: #1e1928; --ink: #eee9f5; --ink-2: #c6bfd3; --ink-3: #8f879e;
+    --rule: #332c40; --accent: #9b74d6; --accent-soft: #2d2240; --sel: #2fa874; --sel-soft: rgba(47,168,116,0.22);
+    --ref: #75707e; --warn: #e0a84a; --warn-soft: #3a2f1a;
+    --side: #1b1229; --side-2: #2a1d3d; --side-ink: #f1ebf8; --side-ink-2: #b9acd0; --side-accent: #6fcf9c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #15111c; --card: #1e1928; --ink: #eee9f5; --ink-2: #c6bfd3; --ink-3: #8f879e;
+  --rule: #332c40; --accent: #9b74d6; --accent-soft: #2d2240; --sel: #2fa874; --sel-soft: rgba(47,168,116,0.22);
+  --ref: #75707e; --warn: #e0a84a; --warn-soft: #3a2f1a;
+  --side: #1b1229; --side-2: #2a1d3d; --side-ink: #f1ebf8; --side-ink-2: #b9acd0; --side-accent: #6fcf9c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+.shell { display: grid; grid-template-columns: 340px minmax(0, 1fr); min-height: 100%; }
+.side { background: var(--side); color: var(--side-ink); padding: 32px 26px; display: grid; gap: 26px; align-content: start; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.side .kicker { color: var(--side-accent); }
+.side h1 { font-size: 34px; color: var(--side-ink); }
+.side .lede { color: var(--side-ink-2); font-size: 15px; }
+.side header { border-bottom: 1px solid var(--side-2); }
+.side h3 { color: var(--side-ink); }
+.main { padding: 32px 28px 56px; display: grid; gap: 24px; max-width: 1040px; width: 100%; }
+@media (max-width: 1000px) { .shell { grid-template-columns: 1fr; } .side { position: static; height: auto; } .main { padding: 24px 16px 48px; } }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.005em; }
+h1 { font-size: clamp(30px, 4.4vw, 44px); line-height: 1.08; }
+h2 { font-size: 26px; line-height: 1.15; }
+h3 { font-size: 19px; }
+p { margin: 0; max-width: 68ch; }
+.kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--ink-2); font-size: 17px; margin-top: 10px; }
+header { display: grid; gap: 6px; border-bottom: 1px solid var(--rule); padding-bottom: 22px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.case { display: grid; gap: 0; border-left: 2px solid var(--side-accent); }
+.case > div { padding: 10px 0 10px 14px; display: grid; gap: 1px; border-bottom: 1px solid var(--side-2); }
+.case > div:last-child { border-bottom: 0; }
+.case .k { font-size: 11px; color: var(--side-accent); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--font-mono); }
+.case .v { font-weight: 600; color: var(--side-ink); }
+.case .s { font-size: 13px; color: var(--side-ink-2); }
+@media (max-width: 1000px) { .case { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } }
+
+.panel { background: var(--card); border: 1px solid var(--rule); border-top: 4px solid var(--accent); border-radius: 12px; padding: 24px; display: grid; gap: 18px; }
+.panel.methods { border-top-color: var(--sel); }
+.panel-head { display: grid; gap: 6px; }
+.panel-head p { color: var(--ink-2); }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-weight: 600; color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+td { padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.fit { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
+.fit.match { background: var(--sel-soft); color: var(--sel); }
+.fit.less { background: var(--warn-soft); color: var(--warn); }
+.fit.no { background: var(--accent-soft); color: var(--accent); }
+.table-wrap { overflow-x: auto; }
+
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--ink-2); font-family: var(--font-body); font-size: 12px; }
+.chart .axis line, .chart .axis path { stroke: var(--rule); }
+.chart .grid line { stroke: var(--rule); stroke-dasharray: 0; }
+.chart-box { position: relative; }
+.tip { position: absolute; pointer-events: none; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); min-width: 150px; display: none; z-index: 2; }
+.tip b { font-weight: 600; }
+.tip .row { display: flex; justify-content: space-between; gap: 12px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+.slider-box { display: grid; gap: 10px; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; }
+.slider-box label { font-weight: 600; font-size: 14px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.verdict { font-weight: 600; font-size: 15px; }
+.bars { display: grid; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 110px 1fr 46px; align-items: center; gap: 8px; font-size: 13px; }
+.bar-track { height: 10px; background: var(--rule); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--ref); border-radius: 99px; }
+.bar-fill.occ { background: var(--sel); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: end; }
+.f { display: grid; gap: 4px; }
+.f label { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mono); }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; background: var(--paper); }
+.seg button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--ink-2); padding: 6px 11px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+select { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); color: var(--ink); }
+.btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+.btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--rule); font-weight: 500; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--rule); border-left: 3px solid var(--sel); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; background: var(--paper); }
+.tile .k { font-size: 12px; color: var(--ink-3); }
+.tile .v { font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1.1; }
+.tile .s { font-size: 12px; color: var(--ink-2); }
+.notice { display: none; gap: 8px; align-items: start; background: var(--warn-soft); color: var(--ink); border-left: 3px solid var(--warn); border-radius: 6px; padding: 10px 12px; font-size: 14px; }
+.notice.on { display: flex; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+
+.methods { display: grid; gap: 12px; font-size: 14px; color: var(--ink-2); }
+.methods ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.methods a { color: var(--sel); }
+footer { font-size: 13px; color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="side">
+<header>
+  <div class="kicker">Case report companion · Liu et al. 2019 anti-PD-1 cohort</div>
+  <h1>Occult metastatic melanoma: likely source and survival</h1>
+  <p class="lede">An explorer built for the case report "Hiding in Plain Bile". It uses 144 patients with metastatic melanoma treated with anti-PD-1 to show how tumour genomics points to a primary site, and how survival changes with the pattern of spread.</p>
+</header>
+
+<section aria-labelledby="case-h" style="display:grid;gap:10px">
+  <h3 id="case-h">Index case</h3>
+  <div class="case">
+    <div><span class="k">Patient</span><span class="v">Woman, 50</span><span class="s">ECOG 1, hypertension</span></div>
+    <div><span class="k">Presentation</span><span class="v">Elective lap chole</span><span class="s">Pigmented mucosa; omental and peritoneal deposits</span></div>
+    <div><span class="k">Suspected primary</span><span class="v">Left buttock mole</span><span class="s">Excised 1 year earlier, never examined</span></div>
+    <div><span class="k">Spread</span><span class="v">Brain, visceral, bone</span><span class="s">Plus lung, nodes, peritoneum, skin</span></div>
+    <div><span class="k">Molecular</span><span class="v">BRAF V600E · MSS</span><span class="s">No GNAQ, GNA11, KIT, NRAS, SF3B1, BAP1 or NF1 variant</span></div>
+    <div><span class="k">Stage · molGPA</span><span class="v">TX M1d · ≈ 1.5</span><span class="s">On pembrolizumab, brain progression</span></div>
+  </div>
+</section>
+</aside>
+<main class="main">
+<section class="panel" aria-labelledby="src-h">
+  <div class="panel-head">
+    <div class="kicker">1 · Estimated source</div>
+    <h2 id="src-h">Her driver profile fits cutaneous melanoma; a UV signature would confirm it</h2>
+    <p>Each melanoma subtype carries its own drivers and its own share of UV-induced mutations. Her panel found only BRAF V600E. In this cohort, tumours with an occult primary mostly look cutaneous by UV signature.</p>
+  </div>
+  <div class="grid-2">
+    <div style="display:grid;gap:10px">
+      <div class="legend"><span><i style="background:var(--sel)"></i>Occult primary</span><span><i style="background:var(--ref)"></i>Known primary</span><span><i style="background:var(--accent)"></i>Hypothetical result for this patient (slider)</span></div>
+      <div class="chart-box" id="uvBox">
+        <svg class="chart" id="uvChart" viewBox="0 0 640 380" role="img" aria-label="UV-induced mutation share by primary type"></svg>
+        <div class="tip" id="uvTip"></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:16px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Subtype</th><th>Typical drivers</th><th>Her fit</th></tr></thead>
+          <tbody>
+            <tr><td>Cutaneous, low sun damage (trunk, buttock)</td><td>BRAF V600E</td><td><span class="fit match">Matches</span></td></tr>
+            <tr><td>Cutaneous, chronic sun damage</td><td>NF1, NRAS; very high TMB</td><td><span class="fit less">Less likely</span></td></tr>
+            <tr><td>Acral, mucosal</td><td>KIT, NRAS, SF3B1; amplifications</td><td><span class="fit less">Less likely</span></td></tr>
+            <tr><td>Uveal</td><td>GNAQ, GNA11, BAP1, SF3B1</td><td><span class="fit no">Very unlikely</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slider-box">
+        <label for="uvSlider">If exome sequencing of her tumour gave a UV share of <span class="num" id="uvVal">0.75</span></label>
+        <input type="range" id="uvSlider" min="0" max="1" step="0.01" value="0.75">
+        <div class="verdict" id="uvVerdict"></div>
+        <div class="bars" id="uvBars" aria-live="polite"></div>
+        <p style="font-size:12px;color:var(--ink-3)">Bars show the share of each group's tumours at or above this value. Cut-offs of 0.6 and 0.3 are illustrative, not validated.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="surv-h">
+  <div class="panel-head">
+    <div class="kicker">2 · Estimated survival</div>
+    <h2 id="surv-h">Survival on anti-PD-1 by pattern of spread</h2>
+    <p>Choose a subgroup to compare its Kaplan–Meier curve with the whole cohort. "Match index case" selects patients who, like her, had brain, visceral and bone metastases.</p>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn" id="matchBtn" type="button">Match index case</button>
+    <button class="btn ghost" id="resetBtn" type="button">Clear filters</button>
+  </div>
+  <div class="notice" id="smallN" role="status"><strong>Small group.</strong><span id="smallNText"></span></div>
+  <div class="tiles" id="tiles"></div>
+  <div class="legend"><span><i style="background:var(--sel)"></i><span id="legSel">Selected subgroup</span></span><span><i style="background:var(--ref)"></i>Whole cohort (n = 144)</span><span><i style="background:var(--sel-soft);height:10px"></i>95% CI, selected</span></div>
+  <div class="chart-box" id="kmBox">
+    <svg class="chart" id="kmChart" viewBox="0 0 900 400" role="img" aria-label="Kaplan-Meier overall survival"></svg>
+    <div class="tip" id="kmTip"></div>
+  </div>
+</section>
+
+<section class="panel methods" aria-labelledby="m-h">
+  <h3 id="m-h">Methods and limits</h3>
+  <ul>
+    <li><strong>Data.</strong> Clinical file for cBioPortal study <span style="font-family:var(--font-mono)">mel_dfci_2019</span>: whole-exome sequencing of 144 pre-treatment tumours, patients treated with anti-PD-1 (Liu et al., Nat Med 2019). Downloaded 21 November 2026.</li>
+    <li><strong>Survival.</strong> Overall survival from the start of anti-PD-1. Kaplan–Meier estimates with 95% confidence intervals on the log(−log) scale. Medians and their intervals are where the curve and its bands first reach 50%.</li>
+    <li><strong>UV share.</strong> UV-induced mutations divided by total mutations per tumour. Occult vs cutaneous: p = 0.64; occult vs acral and mucosal: p &lt; 0.001 (Mann–Whitney).</li>
+    <li><strong>Limits.</strong> These are group estimates, not a prediction for one patient. Brain metastases here were present at the start of treatment; hers developed on pembrolizumab. The cohort comes from Western tertiary centres with full access to treatment. Subgroups under 10 patients have very wide intervals.</li>
+  </ul>
+  <p>Sources: <a href="https://www.cbioportal.org/study/summary?id=mel_dfci_2019">cBioPortal mel_dfci_2019</a> · <a href="https://www.ncbi.nlm.nih.gov/pubmed/31792460">Liu et al., Nat Med 2019 (PubMed 31792460)</a></p>
+</section>
+<footer>Educational companion to a case report. Not for clinical decision-making for any individual patient.</footer>
+</main>
+</div>
+
+<script>
+const DATA = [{"primary":"occult","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"No","ldh":"Unknown","response":"Progressive Disease","os":9.43,"ev":1,"uv":0.015,"tmb":0.67},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":37.97,"ev":1,"uv":0.374,"tmb":2.37},{"primary":"occult","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":31.27,"ev":1,"uv":0.674,"tmb":4.2},{"primary":"acral","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Mixed Response","os":26.17,"ev":0,"uv":0.761,"tmb":8.2},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":26.3,"ev":0,"uv":0.121,"tmb":3.2},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Mixed Response","os":17.37,"ev":1,"uv":0.516,"tmb":4.2},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"Yes","response":"Complete Response","os":26.0,"ev":0,"uv":0.749,"tmb":8.23},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":1.57,"ev":1,"uv":0.577,"tmb":5.3},{"primary":"acral","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":5.5,"ev":1,"uv":0.171,"tmb":1.47},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":5.33,"ev":1,"uv":0.468,"tmb":5.67},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":16.87,"ev":0,"uv":0.863,"tmb":33.5},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"No","ldh":"No","response":"Progressive Disease","os":17.37,"ev":1,"uv":0.786,"tmb":8.03},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":3.93,"ev":1,"uv":0.865,"tmb":7.67},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"Yes","response":"Progressive Disease","os":9.83,"ev":1,"uv":0.221,"tmb":1.13},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":43.87,"ev":0,"uv":0.735,"tmb":7.37},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"No","response":"Progressive Disease","os":8.67,"ev":1,"uv":0.324,"tmb":2.7},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"No","ldh":"No","response":"Complete Response","os":43.7,"ev":0,"uv":0.871,"tmb":36.17},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":43.53,"ev":0,"uv":0.844,"tmb":25.57},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Complete Response","os":32.6,"ev":0,"uv":0.393,"tmb":1.87},{"primary":"occult","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":33.07,"ev":0,"uv":0.822,"tmb":21.67},{"primary":"occult","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"No","ldh":"No","response":"Complete Response","os":28.87,"ev":0,"uv":0.752,"tmb":13.73},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"No","ldh":"Yes","response":"Progressive Disease","os":1.93,"ev":1,"uv":0.832,"tmb":19.6},{"primary":"occult","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":6.4,"ev":1,"uv":0.799,"tmb":9.4},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":27.77,"ev":0,"uv":0.793,"tmb":10.33},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Complete Response","os":24.63,"ev":0,"uv":0.853,"tmb":21.0},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Progressive Disease","os":12.33,"ev":1,"uv":0.807,"tmb":11.37},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":19.67,"ev":1,"uv":0.787,"tmb":10.93},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Complete Response","os":20.93,"ev":0,"uv":0.829,"tmb":12.8},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":23.27,"ev":0,"uv":0.802,"tmb":19.03},{"primary":"occult","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Complete Response","os":25.73,"ev":0,"uv":0.893,"tmb":28.6},{"primary":"acral","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":6.2,"ev":1,"uv":0.245,"tmb":1.0},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":11.7,"ev":1,"uv":0.841,"tmb":69.2},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Partial Response","os":29.17,"ev":0,"uv":0.543,"tmb":2.03},{"primary":"skin","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Stable Disease","os":33.2,"ev":0,"uv":0.407,"tmb":1.63},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":21.0,"ev":0,"uv":0.7,"tmb":11.1},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":22.07,"ev":0,"uv":0.864,"tmb":27.43},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Complete Response","os":27.77,"ev":0,"uv":0.855,"tmb":9.7},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Complete Response","os":20.4,"ev":0,"uv":0.799,"tmb":12.4},{"primary":"occult","m":"M1c","brain":"Yes","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Complete Response","os":32.0,"ev":0,"uv":0.836,"tmb":18.1},{"primary":"skin","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Partial Response","os":26.4,"ev":0,"uv":0.788,"tmb":10.83},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"No","response":"Stable Disease","os":16.57,"ev":1,"uv":0.8,"tmb":7.33},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":4.97,"ev":1,"uv":0.544,"tmb":6.0},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"No","ldh":"No","response":"Partial Response","os":22.83,"ev":0,"uv":0.087,"tmb":0.8},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Stable Disease","os":21.17,"ev":0,"uv":0.66,"tmb":2.37},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Progressive Disease","os":15.83,"ev":0,"uv":0.806,"tmb":8.47},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":2.9,"ev":1,"uv":0.763,"tmb":6.73},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Progressive Disease","os":4.77,"ev":0,"uv":0.759,"tmb":14.67},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":6.47,"ev":0,"uv":0.071,"tmb":76.63},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"No","node":"Yes","ldh":"No","response":"Stable Disease","os":9.6,"ev":0,"uv":0.065,"tmb":1.63},{"primary":"occult","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":6.7,"ev":1,"uv":0.899,"tmb":52.23},{"primary":"occult","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":5.77,"ev":1,"uv":0.811,"tmb":6.73},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":2.5,"ev":0,"uv":0.843,"tmb":21.47},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":6.83,"ev":1,"uv":0.0,"tmb":0.33},{"primary":"occult","m":"M1c","brain":"Yes","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":9.4,"ev":1,"uv":0.0,"tmb":1.4},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":20.77,"ev":0,"uv":0.603,"tmb":1.07},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":18.1,"ev":0,"uv":0.876,"tmb":45.8},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"No","response":"Stable Disease","os":22.87,"ev":1,"uv":0.712,"tmb":12.2},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Stable Disease","os":11.57,"ev":0,"uv":0.168,"tmb":1.9},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Stable Disease","os":9.07,"ev":0,"uv":0.83,"tmb":22.67},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":1.4,"ev":1,"uv":0.215,"tmb":2.4},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Partial Response","os":21.77,"ev":0,"uv":0.821,"tmb":15.93},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Progressive Disease","os":4.33,"ev":1,"uv":0.756,"tmb":11.4},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Stable Disease","os":12.67,"ev":1,"uv":0.856,"tmb":19.37},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Complete Response","os":15.87,"ev":0,"uv":0.753,"tmb":9.17},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":24.93,"ev":1,"uv":0.77,"tmb":5.73},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Progressive Disease","os":19.07,"ev":1,"uv":0.782,"tmb":10.9},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Complete Response","os":17.1,"ev":0,"uv":0.87,"tmb":66.1},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Stable Disease","os":6.77,"ev":0,"uv":0.783,"tmb":5.27},{"primary":"skin","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Complete Response","os":20.57,"ev":0,"uv":0.696,"tmb":4.43},{"primary":"acral","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":2.47,"ev":1,"uv":0.075,"tmb":0.73},{"primary":"acral","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":23.93,"ev":0,"uv":0.144,"tmb":1.67},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":21.93,"ev":0,"uv":0.945,"tmb":140.63},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":9.67,"ev":0,"uv":0.853,"tmb":15.23},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Stable Disease","os":21.97,"ev":0,"uv":0.864,"tmb":19.2},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":29.83,"ev":0,"uv":0.859,"tmb":65.5},{"primary":"occult","m":"M1c","brain":"Yes","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Progressive Disease","os":2.7,"ev":1,"uv":0.903,"tmb":57.77},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Partial Response","os":32.0,"ev":0,"uv":0.304,"tmb":2.0},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"No","response":"Progressive Disease","os":8.07,"ev":1,"uv":0.711,"tmb":13.0},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"No","bone":"Yes","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":17.07,"ev":1,"uv":0.56,"tmb":24.3},{"primary":"mucosal","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Progressive Disease","os":5.57,"ev":1,"uv":0.06,"tmb":2.0},{"primary":"acral","m":"M1b","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Progressive Disease","os":20.87,"ev":1,"uv":0.224,"tmb":2.37},{"primary":"occult","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Complete Response","os":27.3,"ev":0,"uv":0.82,"tmb":58.87},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":13.07,"ev":1,"uv":0.857,"tmb":18.9},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":3.0,"ev":1,"uv":0.967,"tmb":180.3},{"primary":"acral","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":30.2,"ev":0,"uv":0.0,"tmb":3.47},{"primary":"acral","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":8.43,"ev":1,"uv":0.198,"tmb":1.9},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Unknown","response":"Progressive Disease","os":32.5,"ev":0,"uv":0.561,"tmb":4.37},{"primary":"occult","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":4.57,"ev":1,"uv":0.696,"tmb":9.23},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":36.53,"ev":0,"uv":0.794,"tmb":10.9},{"primary":"skin","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Progressive Disease","os":14.37,"ev":1,"uv":0.701,"tmb":7.33},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Stable Disease","os":7.1,"ev":1,"uv":0.678,"tmb":5.33},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Unknown","response":"Progressive Disease","os":14.2,"ev":1,"uv":0.297,"tmb":5.53},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Progressive Disease","os":1.77,"ev":1,"uv":0.836,"tmb":9.03},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":55.97,"ev":0,"uv":0.0,"tmb":0.3},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Partial Response","os":56.37,"ev":0,"uv":0.0,"tmb":0.6},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Stable Disease","os":32.27,"ev":1,"uv":0.572,"tmb":1.3},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Progressive Disease","os":15.03,"ev":1,"uv":0.759,"tmb":6.03},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":9.17,"ev":1,"uv":0.074,"tmb":1.33},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":11.43,"ev":1,"uv":0.347,"tmb":1.27},{"primary":"skin","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Stable Disease","os":31.23,"ev":0,"uv":0.092,"tmb":0.37},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Complete Response","os":20.0,"ev":1,"uv":0.868,"tmb":12.77},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":15.6,"ev":1,"uv":0.111,"tmb":202.83},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Partial Response","os":56.17,"ev":0,"uv":0.961,"tmb":328.17},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"Yes","response":"Complete Response","os":34.23,"ev":0,"uv":0.789,"tmb":16.87},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":30.83,"ev":0,"uv":0.17,"tmb":2.8},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":30.73,"ev":0,"uv":0.042,"tmb":2.17},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":55.53,"ev":0,"uv":0.797,"tmb":9.57},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Stable Disease","os":29.87,"ev":0,"uv":0.846,"tmb":27.87},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":31.23,"ev":0,"uv":0.863,"tmb":25.27},{"primary":"occult","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":1.77,"ev":1,"uv":0.174,"tmb":0.93},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":54.5,"ev":0,"uv":0.049,"tmb":53.83},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Mixed Response","os":5.83,"ev":1,"uv":0.786,"tmb":6.57},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Partial Response","os":51.57,"ev":0,"uv":0.877,"tmb":37.73},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Mixed Response","os":33.9,"ev":1,"uv":0.404,"tmb":9.57},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":50.1,"ev":0,"uv":0.802,"tmb":15.97},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"No","node":"No","ldh":"Yes","response":"Progressive Disease","os":4.07,"ev":1,"uv":0.0,"tmb":0.57},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":10.1,"ev":1,"uv":0.61,"tmb":3.07},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":6.37,"ev":1,"uv":0.805,"tmb":10.5},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Stable Disease","os":22.9,"ev":1,"uv":0.061,"tmb":31.0},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Stable Disease","os":22.07,"ev":1,"uv":0.871,"tmb":13.03},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"No","node":"Yes","ldh":"No","response":"Stable Disease","os":32.9,"ev":0,"uv":0.916,"tmb":70.43},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Partial Response","os":33.37,"ev":0,"uv":0.932,"tmb":208.17},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":5.93,"ev":1,"uv":0.0,"tmb":2.9},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"Yes","lung":"No","node":"Yes","ldh":"No","response":"Progressive Disease","os":4.53,"ev":1,"uv":0.103,"tmb":2.43},{"primary":"occult","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Stable Disease","os":8.97,"ev":1,"uv":0.11,"tmb":2.53},{"primary":"skin","m":"M1a","brain":"No","visceral":"No","bone":"No","lung":"No","node":"No","ldh":"No","response":"Progressive Disease","os":13.17,"ev":0,"uv":0.544,"tmb":4.03},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":28.2,"ev":1,"uv":0.362,"tmb":3.0},{"primary":"occult","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Partial Response","os":29.7,"ev":0,"uv":0.857,"tmb":24.33},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":14.8,"ev":1,"uv":0.783,"tmb":3.03},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Progressive Disease","os":11.87,"ev":1,"uv":0.14,"tmb":1.43},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Progressive Disease","os":28.3,"ev":0,"uv":0.669,"tmb":6.73},{"primary":"skin","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Stable Disease","os":33.5,"ev":1,"uv":0.76,"tmb":6.37},{"primary":"acral","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Progressive Disease","os":16.73,"ev":1,"uv":0.179,"tmb":1.13},{"primary":"occult","m":"M1c","brain":"Yes","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"Yes","response":"Progressive Disease","os":4.37,"ev":1,"uv":0.862,"tmb":49.27},{"primary":"skin","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":2.37,"ev":1,"uv":0.735,"tmb":6.5},{"primary":"mucosal","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"No","ldh":"No","response":"Progressive Disease","os":5.47,"ev":1,"uv":0.002,"tmb":1.63},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Stable Disease","os":44.23,"ev":0,"uv":0.779,"tmb":9.23},{"primary":"occult","m":"M1c","brain":"No","visceral":"No","bone":"Yes","lung":"No","node":"Yes","ldh":"Yes","response":"Partial Response","os":42.1,"ev":0,"uv":0.247,"tmb":2.9},{"primary":"acral","m":"M1c","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":2.47,"ev":1,"uv":0.12,"tmb":1.23},{"primary":"skin","m":"IIIC","brain":"No","visceral":"No","bone":"No","lung":"No","node":"Yes","ldh":"No","response":"Progressive Disease","os":32.1,"ev":0,"uv":0.7,"tmb":21.8},{"primary":"skin","m":"M1c","brain":"Yes","visceral":"Yes","bone":"Yes","lung":"Yes","node":"Yes","ldh":"Yes","response":"Progressive Disease","os":1.33,"ev":1,"uv":0.821,"tmb":8.9},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"No","ldh":"No","response":"Complete Response","os":30.43,"ev":0,"uv":0.888,"tmb":21.47},{"primary":"occult","m":"M1b","brain":"No","visceral":"No","bone":"No","lung":"Yes","node":"Yes","ldh":"No","response":"Progressive Disease","os":22.77,"ev":1,"uv":0.83,"tmb":10.07},{"primary":"skin","m":"M1c","brain":"No","visceral":"Yes","bone":"No","lung":"Yes","node":"Yes","ldh":"Yes","response":"Partial Response","os":30.7,"ev":0,"uv":0.831,"tmb":30.2}];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const fmt = (v, d = 1) => v == null ? "NR" : v.toFixed(d);
+const pct = v => Math.round(v * 100) + "%";
+
+/* ---------- Kaplan–Meier (same method as the Python script) ---------- */
+function km(rows) {
+  const t = rows.map(r => r.os), e = rows.map(r => r.ev);
+  const times = [...new Set(rows.filter(r => r.ev === 1).map(r => r.os))].sort((a, b) => a - b);
+  let S = 1, v = 0; const out = [{ t: 0, S: 1, lo: 1, hi: 1 }];
+  for (const ti of times) {
+    const n = t.filter(x => x >= ti).length;
+    const d = rows.filter(r => r.os === ti && r.ev === 1).length;
+    S *= 1 - d / n;
+    if (n - d > 0) v += d / (n * (n - d));
+    let lo = S, hi = S;
+    if (S > 0 && S < 1) { const se = Math.sqrt(v) / Math.abs(Math.log(S)); lo = Math.pow(S, Math.exp(1.96 * se)); hi = Math.pow(S, Math.exp(-1.96 * se)); }
+    out.push({ t: ti, S, lo, hi });
+  }
+  return out;
+}
+const firstBelow = (c, key) => { const h = c.find(p => p[key] <= 0.5); return h ? h.t : null; };
+const survAt = (c, m) => { let s = 1; for (const p of c) { if (p.t <= m) s = p.S; else break; } return s; };
+const bandAt = (c, m) => { let s = c[0]; for (const p of c) { if (p.t <= m) s = p; else break; } return s; };
+
+/* ---------- Panel 1: UV share ---------- */
+const GROUPS = [["skin", "Cutaneous"], ["occult", "Occult primary"], ["acral", "Acral"], ["mucosal", "Mucosal"]];
+const uvSvg = document.getElementById("uvChart"), uvTip = document.getElementById("uvTip");
+const slider = document.getElementById("uvSlider");
+function seeded(i) { const x = Math.sin(i * 9301 + 49297) * 233280; return x - Math.floor(x); }
+function drawUV() {
+  uvSvg.innerHTML = "";
+  const W = 640, H = 380, L = 54, R = 16, T = 16, B = 52, pw = W - L - R, ph = H - T - B;
+  const y = v => T + ph * (1 - v), xc = i => L + pw * (i + 0.5) / GROUPS.length;
+  const g = el("g", { class: "grid" }, uvSvg);
+  [0, 0.2, 0.4, 0.6, 0.8, 1].forEach(v => { el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v) }, g); el("text", { x: L - 8, y: y(v) + 4, "text-anchor": "end" }, uvSvg).textContent = v.toFixed(1); });
+  const yl = el("text", { x: 14, y: T + ph / 2, transform: `rotate(-90 14 ${T + ph / 2})`, "text-anchor": "middle" }, uvSvg); yl.textContent = "Share of mutations that are UV-induced";
+  const hv = +slider.value;
+  el("line", { x1: L, x2: W - R, y1: y(hv), y2: y(hv), stroke: css("--accent"), "stroke-width": 2, "stroke-dasharray": "6 4" }, uvSvg);
+  const hl = el("text", { x: W - R - 4, y: y(hv) - 6, "text-anchor": "end", style: `fill:${css("--accent")};font-weight:600;paint-order:stroke;stroke:${css("--card")};stroke-width:5px;stroke-linejoin:round` }, uvSvg); hl.textContent = "This patient (hypothetical)";
+  GROUPS.forEach(([k, lab], i) => {
+    const rows = DATA.map((r, j) => ({ ...r, j })).filter(r => r.primary === k && r.uv != null);
+    const vals = rows.map(r => r.uv).sort((a, b) => a - b);
+    const med = vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
+    rows.forEach(r => {
+      const cx = xc(i) + (seeded(r.j) - 0.5) * 70;
+      const c = el("circle", { cx, cy: y(r.uv), r: 5, fill: k === "occult" ? css("--sel") : css("--ref"), "fill-opacity": 0.78, stroke: css("--card"), "stroke-width": 1.2, tabindex: 0 }, uvSvg);
+      const show = () => { uvTip.innerHTML = `<b>${lab}</b><div class="row"><span>UV share</span><span class="num">${r.uv.toFixed(2)}</span></div><div class="row"><span>TMB (mut/Mb)</span><span class="num">${r.tmb == null ? "–" : r.tmb.toFixed(1)}</span></div><div class="row"><span>Response</span><span>${r.response}</span></div>`; place(uvTip, document.getElementById("uvBox"), cx / W, y(r.uv) / H); };
+      c.addEventListener("mouseenter", show); c.addEventListener("focus", show);
+      c.addEventListener("mouseleave", () => uvTip.style.display = "none"); c.addEventListener("blur", () => uvTip.style.display = "none");
+    });
+    el("line", { x1: xc(i) - 46, x2: xc(i) + 46, y1: y(med), y2: y(med), stroke: css("--ink"), "stroke-width": 3, "stroke-linecap": "round" }, uvSvg);
+    const mt = el("text", { x: xc(i) + 50, y: y(med) + 4, style: `fill:${css("--ink")};font-weight:600` }, uvSvg); mt.textContent = med.toFixed(2);
+    const t1 = el("text", { x: xc(i), y: H - B + 20, "text-anchor": "middle", style: `fill:${css("--ink")};font-weight:600` }, uvSvg); t1.textContent = lab;
+    const t2 = el("text", { x: xc(i), y: H - B + 36, "text-anchor": "middle" }, uvSvg); t2.textContent = `n = ${rows.length}`;
+  });
+}
+function place(tip, box, fx, fy) {
+  tip.style.display = "block";
+  const bw = box.clientWidth, bh = box.clientHeight, tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = fx * bw + 14, yv = fy * bh - th - 10;
+  if (x + tw > bw) x = fx * bw - tw - 14;
+  if (yv < 0) yv = fy * bh + 14;
+  tip.style.left = Math.max(0, x) + "px"; tip.style.top = Math.min(bh - th, Math.max(0, yv)) + "px";
+}
+function updateUV() {
+  const v = +slider.value;
+  document.getElementById("uvVal").textContent = v.toFixed(2);
+  const verdict = document.getElementById("uvVerdict");
+  verdict.textContent = v >= 0.6 ? "Reads as cutaneous (sun-exposed skin) origin, consistent with the buttock lesion."
+    : v < 0.3 ? "Reads as acral or mucosal origin: look again at soles, nails and mucosa."
+    : "Indeterminate: overlaps cutaneous and non-UV groups.";
+  verdict.style.color = v >= 0.6 ? css("--sel") : v < 0.3 ? css("--accent") : css("--warn");
+  const bars = document.getElementById("uvBars"); bars.innerHTML = "";
+  GROUPS.forEach(([k, lab]) => {
+    const vals = DATA.filter(r => r.primary === k && r.uv != null).map(r => r.uv);
+    const share = vals.filter(x => x >= v).length / vals.length;
+    const row = document.createElement("div"); row.className = "bar-row";
+    row.innerHTML = `<span>${lab}</span><div class="bar-track"><div class="bar-fill ${k === "occult" ? "occ" : ""}" style="width:${share * 100}%"></div></div><span class="num" style="text-align:right">${pct(share)}</span>`;
+    bars.appendChild(row);
+  });
+  drawUV();
+}
+slider.addEventListener("input", updateUV);
+
+/* ---------- Panel 2: survival ---------- */
+const FILTERS = [
+  { key: "brain", label: "Brain mets", opts: ["Any", "Yes", "No"] },
+  { key: "visceral", label: "Liver / visceral", opts: ["Any", "Yes", "No"] },
+  { key: "bone", label: "Bone", opts: ["Any", "Yes", "No"] },
+  { key: "lung", label: "Lung", opts: ["Any", "Yes", "No"] },
+  { key: "ldh", label: "LDH raised", opts: ["Any", "Yes", "No"] },
+];
+const state = { brain: "Any", visceral: "Any", bone: "Any", lung: "Any", ldh: "Any", primary: "Any", m: "Any" };
+const fbox = document.getElementById("filters");
+function buildFilters() {
+  fbox.innerHTML = "";
+  FILTERS.forEach(f => {
+    const w = document.createElement("div"); w.className = "f";
+    const lid = "lbl-" + f.key;
+    w.innerHTML = `<label id="${lid}">${f.label}</label>`;
+    const seg = document.createElement("div"); seg.className = "seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-labelledby", lid);
+    f.opts.forEach(o => { const b = document.createElement("button"); b.type = "button"; b.id = `f-${f.key}-${o}`; b.textContent = o; b.setAttribute("aria-pressed", state[f.key] === o); b.onclick = () => { state[f.key] = o; buildFilters(); updateKM(); }; seg.appendChild(b); });
+    w.appendChild(seg); fbox.appendChild(w);
+  });
+  const sel = (key, label, opts) => {
+    const w = document.createElement("div"); w.className = "f";
+    w.innerHTML = `<label for="s-${key}">${label}</label><select id="s-${key}">${opts.map(([v, t]) => `<option value="${v}" ${state[key] === v ? "selected" : ""}>${t}</option>`).join("")}</select>`;
+    w.querySelector("select").onchange = e => { state[key] = e.target.value; updateKM(); };
+    fbox.appendChild(w);
+  };
+  sel("primary", "Primary type", [["Any", "Any"], ["skin", "Cutaneous"], ["occult", "Occult"], ["acral", "Acral"], ["mucosal", "Mucosal"]]);
+  sel("m", "M stage (AJCC 7)", [["Any", "Any"], ["M1c", "M1c"], ["M1b", "M1b"], ["M1a", "M1a"], ["IIIC", "IIIC"]]);
+}
+const subset = () => DATA.filter(r => Object.entries(state).every(([k, v]) => v === "Any" || r[k] === v));
+const describe = () => { const parts = []; Object.entries(state).forEach(([k, v]) => { if (v === "Any") return; const f = FILTERS.find(x => x.key === k); parts.push(f ? `${f.label}: ${v}` : k === "primary" ? `Primary: ${({ skin: "cutaneous" })[v] || v}` : `${v}`); }); return parts.length ? parts.join(" · ") : "Whole cohort"; };
+
+const kmSvg = document.getElementById("kmChart"), kmTip = document.getElementById("kmTip");
+const ALL = km(DATA);
+function updateKM() {
+  const rows = subset(), c = rows.length ? km(rows) : null;
+  const tiles = document.getElementById("tiles");
+  const med = c ? firstBelow(c, "S") : null, lo = c ? firstBelow(c, "lo") : null, hi = c ? firstBelow(c, "hi") : null;
+  const deaths = rows.filter(r => r.ev).length;
+  tiles.innerHTML = [
+    ["Patients", rows.length, `${deaths} deaths`],
+    ["Median survival", c ? (med == null ? "NR" : med.toFixed(1) + " mo") : "–", c ? `95% CI ${fmt(lo)}–${fmt(hi)} mo` : ""],
+    ["Alive at 12 months", c ? pct(survAt(c, 12)) : "–", `Whole cohort ${pct(survAt(ALL, 12))}`],
+    ["Alive at 24 months", c ? pct(survAt(c, 24)) : "–", `Whole cohort ${pct(survAt(ALL, 24))}`],
+  ].map(([k, v, s]) => `<div class="tile"><span class="k">${k}</span><span class="v num">${v}</span><span class="s num">${s}</span></div>`).join("");
+  const sn = document.getElementById("smallN");
+  sn.classList.toggle("on", rows.length > 0 && rows.length < 10);
+  document.getElementById("smallNText").textContent = rows.length === 0 ? "" : ` Only ${rows.length} patients match. Treat these estimates as illustrative; the confidence interval is very wide.`;
+  if (rows.length === 0) { sn.classList.add("on"); document.getElementById("smallNText").textContent = " No patients match these filters. Loosen one."; }
+  document.getElementById("legSel").textContent = `Selected: ${describe()} (n = ${rows.length})`;
+  drawKM(c, rows);
+}
+function drawKM(c, rows) {
+  kmSvg.innerHTML = "";
+  const W = 900, H = 400, L = 56, R = 20, T = 14, B = 46, pw = W - L - R, ph = H - T - B, XM = 60;
+  const x = t => L + pw * Math.min(t, XM) / XM, y = s => T + ph * (1 - s);
+  const g = el("g", { class: "grid" }, kmSvg);
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), "stroke-dasharray": v === 0.5 ? "4 4" : "0" }, g); el("text", { x: L - 8, y: y(v) + 4, "text-anchor": "end" }, kmSvg).textContent = pct(v); });
+  [0, 12, 24, 36, 48, 60].forEach(m => el("text", { x: x(m), y: H - B + 20, "text-anchor": "middle" }, kmSvg).textContent = m);
+  el("text", { x: L + pw / 2, y: H - 6, "text-anchor": "middle" }, kmSvg).textContent = "Months from start of anti-PD-1";
+  const stepPath = (curve, key, maxT) => { let d = `M${x(0)},${y(1)}`; let prev = 1; curve.slice(1).forEach(p => { d += `H${x(p.t)}V${y(p[key])}`; prev = p[key]; }); d += `H${x(maxT)}`; return d; };
+  const maxAll = Math.max(...DATA.map(r => r.os));
+  el("path", { d: stepPath(ALL, "S", maxAll), fill: "none", stroke: css("--ref"), "stroke-width": 2 }, kmSvg);
+  if (c) {
+    const maxT = Math.max(...rows.map(r => r.os));
+    // CI band
+    let top = `M${x(0)},${y(1)}`, bot = "";
+    const pts = c.slice(1);
+    pts.forEach(p => { top += `H${x(p.t)}V${y(p.hi)}`; });
+    top += `H${x(maxT)}`;
+    const rev = [...pts].reverse();
+    bot = `V${y(pts.length ? pts[pts.length - 1].lo : 1)}`;
+    rev.forEach((p, i) => { const prevLo = i + 1 < rev.length ? rev[i + 1].lo : 1; bot += `H${x(p.t)}V${y(prevLo)}`; });
+    bot += `H${x(0)}Z`;
+    el("path", { d: top + bot, fill: css("--sel-soft"), stroke: "none" }, kmSvg);
+    el("path", { d: stepPath(c, "S", maxT), fill: "none", stroke: css("--sel"), "stroke-width": 2.5 }, kmSvg);
+    rows.filter(r => !r.ev && r.os <= XM).forEach(r => { const s = survAt(c, r.os); el("line", { x1: x(r.os), x2: x(r.os), y1: y(s) - 5, y2: y(s) + 5, stroke: css("--sel"), "stroke-width": 1.5 }, kmSvg); });
+    const med = firstBelow(c, "S");
+    if (med != null && med <= XM) { el("circle", { cx: x(med), cy: y(0.5), r: 5, fill: css("--sel"), stroke: css("--card"), "stroke-width": 2 }, kmSvg); const mt = el("text", { x: x(med) + 8, y: y(0.5) - 8, style: `fill:${css("--ink")};font-weight:600` }, kmSvg); mt.textContent = `Median ${med.toFixed(1)} mo`; }
+  }
+  // hover layer
+  const cross = el("line", { y1: T, y2: H - B, stroke: css("--ink-3"), "stroke-width": 1, visibility: "hidden" }, kmSvg);
+  const hit = el("rect", { x: L, y: T, width: pw, height: ph, fill: "transparent" }, kmSvg);
+  hit.addEventListener("mousemove", ev => {
+    const r = kmSvg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W;
+    const t = Math.max(0, Math.min(XM, (sx - L) / pw * XM));
+    cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
+    let html = `<b class="num">Month ${t.toFixed(0)}</b>`;
+    if (c) { const b = bandAt(c, t); html += `<div class="row"><span><span class="sw" style="background:${css("--sel")}"></span>Selected</span><span class="num">${pct(b.S)} (${pct(b.lo)}–${pct(b.hi)})</span></div><div class="row"><span>At risk</span><span class="num">${rows.filter(r2 => r2.os >= t).length}</span></div>`; }
+    html += `<div class="row"><span><span class="sw" style="background:${css("--ref")}"></span>Whole cohort</span><span class="num">${pct(survAt(ALL, t))}</span></div>`;
+    kmTip.innerHTML = html; place(kmTip, document.getElementById("kmBox"), x(t) / W, (ev.clientY - r.top) / r.height);
+  });
+  hit.addEventListener("mouseleave", () => { kmTip.style.display = "none"; cross.setAttribute("visibility", "hidden"); });
+}
+document.getElementById("matchBtn").onclick = () => { Object.keys(state).forEach(k => state[k] = "Any"); state.brain = "Yes"; state.visceral = "Yes"; state.bone = "Yes"; buildFilters(); updateKM(); };
+document.getElementById("resetBtn").onclick = () => { Object.keys(state).forEach(k => state[k] = "Any"); buildFilters(); updateKM(); };
+
+function renderAll() { buildFilters(); updateUV(); updateKM(); }
+state.brain = "Yes"; state.visceral = "Yes"; state.bone = "Yes";
+renderAll();
+const mq = window.matchMedia("(prefers-color-scheme: dark)"); mq.addEventListener && mq.addEventListener("change", () => { updateUV(); updateKM(); });
+new MutationObserver(() => { updateUV(); updateKM(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
+</body>
+</html>
